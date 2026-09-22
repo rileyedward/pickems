@@ -47,6 +47,17 @@ return [
             'report' => false,
         ],
 
+        // Static images committed to the repo (team logos), served straight
+        // from public/ so they don't depend on storage:link or a sync.
+        'images' => [
+            'driver' => 'local',
+            'root' => public_path('images'),
+            'url' => rtrim((string) env('APP_URL', 'http://localhost'), '/').'/images',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

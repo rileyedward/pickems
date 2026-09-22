@@ -38,8 +38,8 @@ class Team extends Model
      */
     protected function logoUrl(): Attribute
     {
-        return Attribute::make(get: fn (): string => filled($this->logo_path) && Storage::disk('public')->exists($this->logo_path)
-            ? Storage::disk('public')->url($this->logo_path)
+        return Attribute::make(get: fn (): string => filled($this->logo_path) && Storage::disk('images')->exists($this->logo_path)
+            ? Storage::disk('images')->url($this->logo_path)
             : 'https://a.espncdn.com/i/teamlogos/nfl/500/'.strtolower($this->abbreviation).'.png');
     }
 

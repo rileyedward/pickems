@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Create or refresh a team from ESPN data, keeping a local copy of its logo
- * so pages don't hot-link ESPN's CDN.
+ * Create or refresh a team from ESPN data, keeping a copy of its logo in
+ * public/images (committed to the repo) so pages don't hot-link ESPN's CDN.
  *
  * @phpstan-import-type EspnTeam from EspnClient
  */
@@ -26,7 +26,7 @@ class UpsertTeam
             collect($data)->only(['abbreviation', 'location', 'name', 'display_name', 'color', 'alternate_color'])->all(),
         );
 
-        $logoMissing = blank($team->logo_path) || ! Storage::disk('public')->exists($team->logo_path);
+        $logoMissing = blank($team->logo_path) || ! Storage::disk('images')->exists($team->logo_path);
 
         if ($logoMissing && filled($data['logo_url'])) {
             $team->update(['logo_path' => $this->downloadLogo($team, $data['logo_url'])]);
@@ -49,7 +49,7 @@ class UpsertTeam
             return null;
         }
 
-        Storage::disk('public')->put($path, $response->body());
+        Storage::disk('images')->put($path, $response->body());
 
         return $path;
     }

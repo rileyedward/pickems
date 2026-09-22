@@ -11,7 +11,7 @@ use App\Models\Week;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
-    Storage::fake('public');
+    Storage::fake('images');
 });
 
 test('teams sync from espn with a local logo copy', function () {
@@ -25,7 +25,7 @@ test('teams sync from espn with a local logo copy', function () {
         ->display_name->toBe('Seattle Seahawks')
         ->color->toBe('002a5c')
         ->logo_path->toBe('teams/sea.png');
-    Storage::disk('public')->assertExists('teams/sea.png');
+    Storage::disk('images')->assertExists('teams/sea.png');
 
     app(SyncTeams::class)->handle();
     expect(Team::count())->toBe(32);

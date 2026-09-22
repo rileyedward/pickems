@@ -10,7 +10,7 @@ use App\Models\Week;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
-    Storage::fake('public');
+    Storage::fake('images');
     fakeEspn([1 => 'scoreboard-2026-week-1', 2 => 'scoreboard-2026-week-2', 18 => 'scoreboard-2026-week-18']);
 });
 
@@ -39,7 +39,7 @@ test('it loads every team with a logo and creates no users', function () {
 
     expect(Team::count())->toBe(32)
         ->and(User::count())->toBe(0);
-    Storage::disk('public')->assertExists('teams/sea.png');
+    Storage::disk('images')->assertExists('teams/sea.png');
 });
 
 test('a week that has kicked off but is not finished is left open and locked', function () {
