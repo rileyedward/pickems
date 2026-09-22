@@ -1,0 +1,80 @@
+<?php
+
+namespace App\Providers;
+
+use App\Actions\Fortify\CreateNewUser;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
+use Inertia\Inertia;
+use Laravel\Fortify\Fortify;
+
+class FortifyServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        $this->configureActions();
+        $this->configureViews();
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Configure Fortify actions.
+     */
+    private function configureActions(): void
+    {
+        Fortify::createUsersUsing(CreateNewUser::class);
+    }
+
+    /**
+     * Configure Fortify views.
+     */
+    private function configureViews(): void
+    {
+        Fortify::loginView(fn () => Inertia::render('auth/Login'));
+
+        Fortify::registerView(fn () => Inertia::render('auth/Register', [
+            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+        ]));
+
+        // Fortify always registers the password confirmation route when its
+        // views are enabled, so it still needs a page to render.
+        Fortify::confirmPasswordView(fn () => Inertia::render('auth/ConfirmPassword'));
+    }
+
+    /**
+     * Configure rate limiting.
+     */
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('login', function (Request $request) {
+            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+
+            return Limit::perMinute(5)->by($throttleKey);
+        });
+
+        RateLimiter::for('register', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
+
+        // Fortify has no limiter option for registration, so attach one to its
+        // route once the routes exist.
+        $this->app->booted(function () {
+            Route::getRoutes()->refreshNameLookups();
+            Route::getRoutes()->getByName('register.store')?->middleware('throttle:register');
+        });
+    }
+}
