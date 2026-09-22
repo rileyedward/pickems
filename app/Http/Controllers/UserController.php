@@ -40,7 +40,7 @@ class UserController extends Controller
             : Season::orderByDesc('year')->first();
 
         $totals = $season
-            ? SeasonLeaderboard::for($season)->rows()->first(fn (array $row) => $row['user']->is($user))
+            ? collect(SeasonLeaderboard::cached($season)['rows'])->first(fn (array $row) => $row['user']['id'] === $user->id)
             : null;
 
         $entries = $season

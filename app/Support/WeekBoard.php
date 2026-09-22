@@ -20,6 +20,17 @@ class WeekBoard
      */
     public static function present(Week $week): array
     {
+        // A closed week's results are final, so its board is cached.
+        return $week->isClosed()
+            ? ResultsCache::weekBoard($week->id, fn () => self::build($week))
+            : self::build($week);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function build(Week $week): array
+    {
         $week->loadMissing(['season', 'games.homeTeam', 'games.awayTeam', 'entries.user', 'entries.picks']);
 
         $standings = WeekStandings::for($week);

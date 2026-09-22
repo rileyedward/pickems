@@ -35,6 +35,20 @@ class SeasonLeaderboard
     }
 
     /**
+     * The presented leaderboard and chart weeks, from the results cache.
+     *
+     * @return array{weeks: list<int>, rows: list<array<string, mixed>>}
+     */
+    public static function cached(Season $season): array
+    {
+        return ResultsCache::leaderboard($season->id, function () use ($season) {
+            $leaderboard = self::for($season);
+
+            return ['weeks' => $leaderboard->weekNumbers(), 'rows' => $leaderboard->present()];
+        });
+    }
+
+    /**
      * Numbers of the closed weeks, in order: the x-axis of the points chart.
      *
      * @return list<int>

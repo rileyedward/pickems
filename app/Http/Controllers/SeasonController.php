@@ -17,7 +17,7 @@ class SeasonController extends Controller
      */
     public function show(Season $season): Response
     {
-        $leaderboard = SeasonLeaderboard::for($season);
+        $leaderboard = SeasonLeaderboard::cached($season);
 
         $weeks = $season->weeks()
             ->published()
@@ -44,8 +44,8 @@ class SeasonController extends Controller
                         ->values()
                     : [],
             ]),
-            'leaderboard' => $leaderboard->present(),
-            'chartWeeks' => $leaderboard->weekNumbers(),
+            'leaderboard' => $leaderboard['rows'],
+            'chartWeeks' => $leaderboard['weeks'],
         ]);
     }
 }

@@ -24,7 +24,7 @@ class HomeController extends Controller
         return Inertia::render('Home', [
             'board' => $week ? WeekBoard::present($week) : null,
             'myEntry' => $entry ? ['submitted' => $entry->isSubmitted()] : null,
-            'topThree' => $week ? array_slice(SeasonLeaderboard::for($week->season)->present(), 0, 3) : [],
+            'topThree' => $week ? array_slice(SeasonLeaderboard::cached($week->season)['rows'], 0, 3) : [],
         ]);
     }
 }
