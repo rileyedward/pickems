@@ -89,7 +89,7 @@ return [
     |
     */
 
-    'registration_passcode' => env('REGISTRATION_PASSCODE'),
+    'registration_passcode' => env('REGISTRATION_PASSCODE', 1050),
 
     /*
     |--------------------------------------------------------------------------
