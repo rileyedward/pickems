@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Notifications\Notifiable;
@@ -119,7 +120,7 @@ class User extends Authenticatable
     {
         return Attribute::make(get: fn (): ?string => blank($this->photo_path)
             ? null
-            : Storage::disk('public')->url($this->photo_path));
+            : static::photoDisk()->url($this->photo_path));
     }
 
     /**
@@ -137,19 +138,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Store a newly uploaded photo on the public disk, replacing any old one.
+     * The disk profile photos are stored on (see filesystems.photos).
+     */
+    public static function photoDisk(): FilesystemAdapter
+    {
+        return Storage::disk(config('filesystems.photos'));
+    }
+
+    /**
+     * Store a newly uploaded photo on the photo disk, replacing any old one.
      */
     public function replacePhoto(UploadedFile $photo): void
     {
         $this->removePhoto();
 
-        $this->update(['photo_path' => $photo->store('user-photos', 'public')]);
+        $this->update(['photo_path' => $photo->storePublicly('user-photos', config('filesystems.photos'))]);
     }
 
     public function removePhoto(): void
     {
         if (filled($this->photo_path)) {
-            Storage::disk('public')->delete($this->photo_path);
+            static::photoDisk()->delete($this->photo_path);
         }
 
         $this->update(['photo_path' => null]);

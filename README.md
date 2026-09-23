@@ -85,6 +85,10 @@ Ensure you have the following prerequisites installed on your system. You can ve
    npm run dev
    ```
 
+## Deployment
+
+The app runs on Laravel Cloud, whose filesystem is reset on every deploy, so uploaded profile photos can't live on local storage. Attach an object storage bucket (public visibility) to the environment and set `PHOTOS_DISK` to the bucket's disk name. Locally, photos stay on the `public` disk.
+
 ## Testing
 
 Run the Pest test suite along with Pint formatting and PHPStan checks:

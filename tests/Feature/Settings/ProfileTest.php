@@ -20,6 +20,24 @@ test('a user can set their nickname and photo', function () {
     Storage::disk('public')->assertExists($user->photo_path);
 });
 
+test('photos are stored on the configured photo disk', function () {
+    config(['filesystems.photos' => 'photos-bucket']);
+    Storage::fake('photos-bucket');
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->patch(route('profile.update'), [
+        'name' => $user->name,
+        'email' => $user->email,
+        'photo' => UploadedFile::fake()->image('me.png'),
+    ]);
+
+    $user->refresh();
+    Storage::disk('photos-bucket')->assertExists($user->photo_path);
+    Storage::disk('public')->assertMissing($user->photo_path);
+    expect($user->photo_url)->toBe(Storage::disk('photos-bucket')->url($user->photo_path));
+});
+
 test('a user can remove their photo', function () {
     Storage::fake('public');
     $user = User::factory()->create(['photo_path' => UploadedFile::fake()->image('me.png')->store('user-photos', 'public')]);

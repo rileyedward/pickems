@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { avatarColor, initials } from '@/lib/avatar';
 
 const props = withDefaults(
@@ -22,16 +22,25 @@ const props = withDefaults(
 
 const fallbackColor = computed(() => avatarColor(props.id));
 const fallbackInitials = computed(() => initials(props.name));
+
+// A photo whose file has gone missing falls back to initials instead of an
+// empty image.
+const failed = ref(false);
+watch(
+    () => props.photo,
+    () => (failed.value = false),
+);
 </script>
 
 <template>
     <img
-        v-if="photo"
+        v-if="photo && !failed"
         :src="photo"
         :alt="name"
         :title="name"
         :class="sizeClass"
         class="shrink-0 rounded-full bg-muted object-cover"
+        @error="failed = true"
     />
     <div
         v-else

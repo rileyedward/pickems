@@ -17,6 +17,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Profile Photo Disk
+    |--------------------------------------------------------------------------
+    |
+    | Where uploaded profile photos live. Local "public" storage is fine in
+    | development, but Laravel Cloud wipes the filesystem on every deploy, so
+    | production points this at an attached object storage bucket.
+    |
+    */
+
+    'photos' => env('PHOTOS_DISK', 'public'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
