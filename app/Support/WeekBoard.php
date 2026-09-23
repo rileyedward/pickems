@@ -7,11 +7,8 @@ use App\Models\Game;
 use App\Models\Week;
 
 /**
- * The "master spreadsheet" for a week: games, who's in, and — once picks
- * lock — everyone's picks with live standings.
- *
- * Before the lock nobody's picks are shown, only who has submitted, so
- * nobody can copy.
+ * The "master spreadsheet" for a week: games, who's in (with each submitted
+ * entry's picks), and — once picks lock — live standings.
  */
 class WeekBoard
 {
@@ -46,6 +43,9 @@ class WeekBoard
                 ->map(fn (Entry $entry) => [
                     'user' => $entry->user->toAvatar(),
                     'submitted' => $entry->isSubmitted(),
+                    'submitted_at' => $entry->submitted_at?->toIso8601String(),
+                    'tiebreaker_guess' => $entry->isSubmitted() ? $entry->tiebreaker_guess : null,
+                    'picks' => $entry->isSubmitted() ? self::picks($entry) : [],
                 ])
                 ->values(),
             'standings' => $revealPicks ? self::standings($week, $standings) : null,

@@ -1,15 +1,29 @@
 <script setup lang="ts">
+import { usePage } from '@inertiajs/vue3';
 import { Check, Clock, Trophy } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import WeekPhaseBadge from '@/components/WeekPhaseBadge.vue';
 import GameMatchup from '@/components/board/GameMatchup.vue';
 import PickGrid from '@/components/board/PickGrid.vue';
+import PicksList from '@/components/board/PicksList.vue';
 import StandingsList from '@/components/board/StandingsList.vue';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { kickoff, ordinal, points, relative } from '@/lib/format';
 import type { WeekBoard } from '@/types';
 
+type Participant = WeekBoard['participants'][number];
+
 const props = defineProps<{ board: WeekBoard }>();
+
+const page = usePage();
+const myId = computed(() => page.props.auth.user?.id ?? null);
 
 const submittedCount = computed(
     () => props.board.participants.filter((p) => p.submitted).length,
@@ -22,6 +36,29 @@ const podium = computed(() =>
     gridRows.value.filter(
         (row) => row.placement !== null && row.placement <= 3,
     ),
+);
+
+// Who's in → picks modal.
+const viewing = ref<Participant | null>(null);
+
+// Picks section: you first (even before you've submitted), then everyone
+// else who has submitted.
+const me = computed(
+    () =>
+        props.board.participants.find((p) => p.user.id === myId.value) ?? null,
+);
+const pickers = computed(() => [
+    ...(me.value ? [me.value] : []),
+    ...props.board.participants.filter(
+        (p) => p.submitted && p.user.id !== myId.value,
+    ),
+]);
+const selectedId = ref<number | null>(null);
+const selected = computed(
+    () =>
+        pickers.value.find((p) => p.user.id === selectedId.value) ??
+        pickers.value[0] ??
+        null,
 );
 </script>
 
@@ -115,21 +152,33 @@ const podium = computed(() =>
             </div>
         </div>
 
-        <!-- Before the lock: who's in, and the slate. No picks are shown. -->
+        <!-- Before the lock: who's in (tap a submitted player to see their picks), and the slate. -->
         <template v-if="!board.standings">
             <div class="rounded-lg border bg-card p-3 sm:p-4">
                 <h2 class="mb-1 font-semibold">Who's in</h2>
                 <p class="mb-4 text-sm text-muted-foreground">
-                    Everyone's picks appear here when the first game kicks off.
+                    Tap a player who's submitted to see their picks.
                 </p>
                 <div
                     v-if="board.participants.length"
                     class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-4"
                 >
-                    <div
+                    <component
+                        :is="p.submitted ? 'button' : 'div'"
                         v-for="p in board.participants"
                         :key="p.user.id"
-                        class="flex flex-col items-center gap-1 text-center"
+                        :type="p.submitted ? 'button' : undefined"
+                        :title="
+                            p.submitted
+                                ? `View ${p.user.name}'s picks`
+                                : undefined
+                        "
+                        class="flex flex-col items-center gap-1 rounded-md text-center"
+                        :class="{
+                            'cursor-pointer transition hover:opacity-80':
+                                p.submitted,
+                        }"
+                        @click="p.submitted && (viewing = p)"
                     >
                         <div class="relative">
                             <UserAvatar
@@ -154,9 +203,58 @@ const podium = computed(() =>
                         <span class="w-full truncate text-xs">{{
                             p.user.name
                         }}</span>
-                    </div>
+                    </component>
                 </div>
                 <p v-else class="text-sm text-muted-foreground">Nobody yet.</p>
+            </div>
+
+            <div
+                v-if="pickers.length && selected"
+                class="rounded-lg border bg-card p-3 sm:p-4"
+            >
+                <h2 class="mb-1 font-semibold">Picks</h2>
+                <p class="mb-4 text-sm text-muted-foreground">
+                    Picks can change until the lock.
+                </p>
+                <div
+                    class="-mx-3 mb-4 flex gap-2 overflow-x-auto px-3 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0"
+                    role="tablist"
+                >
+                    <button
+                        v-for="p in pickers"
+                        :key="p.user.id"
+                        type="button"
+                        role="tab"
+                        :aria-selected="p.user.id === selected.user.id"
+                        class="flex shrink-0 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm transition"
+                        :class="
+                            p.user.id === selected.user.id
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'hover:bg-muted/60'
+                        "
+                        @click="selectedId = p.user.id"
+                    >
+                        <UserAvatar
+                            v-bind="p.user"
+                            size-class="size-7 text-[10px]"
+                        />
+                        {{ p.user.id === myId ? 'You' : p.user.name }}
+                    </button>
+                </div>
+                <template v-if="selected.submitted">
+                    <p class="mb-2 text-sm text-muted-foreground">
+                        Tie-breaker guess: {{ selected.tiebreaker_guess }} ·
+                        submitted {{ kickoff(selected.submitted_at) }}
+                    </p>
+                    <PicksList
+                        :games="board.games"
+                        :picks="selected.picks"
+                        class="sm:columns-2 sm:gap-8 lg:columns-3 [&>li]:break-inside-avoid"
+                    />
+                </template>
+                <p v-else class="text-sm text-muted-foreground">
+                    You haven't submitted your picks yet.
+                </p>
             </div>
 
             <div class="rounded-lg border bg-card p-3 sm:p-4">
@@ -188,5 +286,26 @@ const podium = computed(() =>
                 :is-final="isClosed"
             />
         </template>
+
+        <!-- Picks viewer -->
+        <Dialog
+            :open="viewing !== null"
+            @update:open="(value) => !value && (viewing = null)"
+        >
+            <DialogContent v-if="viewing" class="max-h-[90dvh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>{{ viewing.user.name }}'s picks</DialogTitle>
+                    <DialogDescription>
+                        Tie-breaker guess: {{ viewing.tiebreaker_guess }} ·
+                        submitted {{ kickoff(viewing.submitted_at) }}
+                    </DialogDescription>
+                </DialogHeader>
+                <PicksList
+                    :games="board.games"
+                    :picks="viewing.picks"
+                    class="max-h-[60vh] overflow-y-auto"
+                />
+            </DialogContent>
+        </Dialog>
     </div>
 </template>

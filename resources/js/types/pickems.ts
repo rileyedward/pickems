@@ -58,7 +58,13 @@ export type WeekBoard = {
     games: Game[];
     tiebreaker_total: number | null;
     all_games_final: boolean;
-    participants: { user: UserAvatar; submitted: boolean }[];
+    participants: {
+        user: UserAvatar;
+        submitted: boolean;
+        submitted_at: string | null;
+        tiebreaker_guess: number | null;
+        picks: Record<number, number>;
+    }[];
     standings: StandingRow[] | null;
 };
 

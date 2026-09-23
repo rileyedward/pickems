@@ -27,10 +27,11 @@ test('the home page works before any week is published', function () {
         ->where('myEntry', null));
 });
 
-test('picks stay hidden until the week locks', function () {
+test('submitted picks are visible before the lock, standings only after', function () {
     $week = openWeekWithGames(2);
-    $entry = Entry::factory()->for($week)->for($this->user)->submitted()->create();
-    $entry->picks()->create(['game_id' => $week->games->first()->id, 'team_id' => $week->games->first()->home_team_id]);
+    $game = $week->games->first();
+    $entry = Entry::factory()->for($week)->for($this->user)->submitted()->create(['tiebreaker_guess' => 41]);
+    $entry->picks()->create(['game_id' => $game->id, 'team_id' => $game->home_team_id]);
 
     $this->actingAs($this->user)->get('/')->assertInertia(fn (Assert $page) => $page
         ->component('Home')
@@ -38,6 +39,8 @@ test('picks stay hidden until the week locks', function () {
         ->where('myEntry.submitted', true)
         ->has('board.participants', 1)
         ->where('board.participants.0.submitted', true)
+        ->where('board.participants.0.tiebreaker_guess', 41)
+        ->where("board.participants.0.picks.{$game->id}", $game->home_team_id)
         ->where('board.standings', null));
 
     $week->update(['locks_at' => now()->subMinute()]);
@@ -45,6 +48,18 @@ test('picks stay hidden until the week locks', function () {
     $this->actingAs($this->user)->get('/')->assertInertia(fn (Assert $page) => $page
         ->has('board.standings', 1)
         ->where("board.standings.0.picks.{$week->games->first()->id}", $week->games->first()->home_team_id));
+});
+
+test('unsubmitted picks stay hidden from other players', function () {
+    $week = openWeekWithGames(1);
+    $game = $week->games->first();
+    $entry = Entry::factory()->for($week)->create(['tiebreaker_guess' => 30]);
+    $entry->picks()->create(['game_id' => $game->id, 'team_id' => $game->home_team_id]);
+
+    $this->actingAs($this->user)->get('/')->assertInertia(fn (Assert $page) => $page
+        ->where('board.participants.0.submitted', false)
+        ->where('board.participants.0.tiebreaker_guess', null)
+        ->where('board.participants.0.picks', []));
 });
 
 test('entries that were never submitted show as did-not-play at the bottom', function () {
