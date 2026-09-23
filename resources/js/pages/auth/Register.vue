@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import InputError from '@/components/InputError.vue';
-import PasswordInput from '@/components/PasswordInput.vue';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
-import { login } from '@/routes';
-import { store } from '@/routes/register';
+import { Form, Head } from "@inertiajs/vue3";
+import InputError from "@/components/InputError.vue";
+import PasswordInput from "@/components/PasswordInput.vue";
+import TextLink from "@/components/TextLink.vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import { login } from "@/routes";
+import { store } from "@/routes/register";
 
 defineProps<{
     passwordRules: string;
@@ -16,9 +16,9 @@ defineProps<{
 
 defineOptions({
     layout: {
-        title: 'Create an account',
+        title: "Create an account",
         description:
-            'Once you register, an admin has to activate your account before you can make picks.',
+            "Once you register, an admin has to activate your account before you can make picks. Have the passcode? Enter it to skip the wait.",
     },
 });
 </script>
@@ -90,10 +90,28 @@ defineOptions({
                 <InputError :message="errors.password_confirmation" />
             </div>
 
+            <div class="grid gap-2">
+                <Label for="passcode">
+                    Passcode
+                    <span class="font-normal text-muted-foreground"
+                        >(optional)</span
+                    >
+                </Label>
+                <Input
+                    id="passcode"
+                    type="text"
+                    :tabindex="5"
+                    autocomplete="off"
+                    name="passcode"
+                    placeholder="Skip the admin approval"
+                />
+                <InputError :message="errors.passcode" />
+            </div>
+
             <Button
                 type="submit"
                 class="mt-2 w-full"
-                tabindex="5"
+                tabindex="6"
                 :disabled="processing"
                 data-test="register-user-button"
             >
@@ -107,7 +125,7 @@ defineOptions({
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
-                :tabindex="6"
+                :tabindex="7"
                 >Log in</TextLink
             >
         </div>

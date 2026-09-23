@@ -81,6 +81,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Registration Passcode
+    |--------------------------------------------------------------------------
+    |
+    | Friends who enter this passcode when registering are activated right
+    | away instead of waiting on an admin. Leave it empty to turn it off.
+    |
+    */
+
+    'registration_passcode' => env('REGISTRATION_PASSCODE'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
