@@ -106,9 +106,16 @@ test('a user profile shows season totals and week results', function () {
 
 test('the players page lists active users', function () {
     User::factory()->create(['name' => 'Waiting Wally']);
+    User::factory()->admin()->create();
 
     $this->actingAs($this->user)
         ->get(route('users.index'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('Users/Index')->has('users', 1));
+});
+
+test('admins have no public profile', function () {
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($this->user)->get(route('users.show', $admin))->assertNotFound();
 });

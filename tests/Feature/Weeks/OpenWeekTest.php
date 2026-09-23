@@ -13,6 +13,7 @@ test('opening a week enters every active user and locks at the first kickoff', f
     $last = Game::factory()->for($week)->create(['kickoff_at' => now()->addDays(6)]);
     $active = User::factory()->active()->count(2)->create();
     User::factory()->create();
+    User::factory()->admin()->create();
 
     app(OpenWeek::class)->handle($week);
 

@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Week;
 
 /**
- * Enter a newly activated user into the week that's currently taking picks,
+ * Enter a newly activated player into the week that's currently taking picks,
  * so someone activated after a week opens can still play it. Does nothing
  * once picks have locked.
  */
@@ -17,7 +17,7 @@ class EnrollInOpenWeek
     {
         $week = Week::currentOpen();
 
-        if (! $user->is_active || $week === null || $week->is_locked) {
+        if (! $user->isPlayer() || $week === null || $week->is_locked) {
             return null;
         }
 

@@ -2,7 +2,6 @@
 
 namespace App\Console\Commands;
 
-use App\Actions\Weeks\EnrollInOpenWeek;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -18,7 +17,7 @@ class CreateAdmin extends Command
     /**
      * Execute the console command.
      */
-    public function handle(EnrollInOpenWeek $enroll): int
+    public function handle(): int
     {
         $email = strtolower((string) $this->argument('email'));
         $name = (string) $this->argument('name');
@@ -48,7 +47,6 @@ class CreateAdmin extends Command
         $user = User::firstOrNew(['email' => $email]);
         $user->fill(['name' => $name, 'password' => $password]);
         $user->forceFill(['email_verified_at' => now(), 'is_admin' => true, 'is_active' => true])->save();
-        $enroll->handle($user);
 
         $this->info($user->wasRecentlyCreated ? "Admin {$email} created." : "Admin {$email} updated.");
 

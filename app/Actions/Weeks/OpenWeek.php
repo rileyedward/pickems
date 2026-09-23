@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Confirm a week's slate and enter every active user. Picks lock at the
+ * Confirm a week's slate and enter every player. Picks lock at the
  * first kickoff, and the last kickoff becomes the tie-breaker unless an admin
  * already chose one.
  */
@@ -37,7 +37,7 @@ class OpenWeek
                 $games->sortBy([['kickoff_at', 'asc'], ['id', 'asc']])->last()->update(['is_tiebreaker' => true]);
             }
 
-            User::active()->each(fn (User $user) => $week->entries()->firstOrCreate(['user_id' => $user->id]));
+            User::players()->each(fn (User $user) => $week->entries()->firstOrCreate(['user_id' => $user->id]));
 
             $week->update([
                 'status' => WeekStatus::Open,

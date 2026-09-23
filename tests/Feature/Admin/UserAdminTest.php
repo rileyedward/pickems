@@ -2,6 +2,7 @@
 
 use App\Models\Entry;
 use App\Models\User;
+use App\Models\Week;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +37,25 @@ test('an admin can make another user an admin', function () {
     $this->actingAs($this->admin)->post(route('admin.users.update', $user), ['is_admin' => true]);
 
     expect($user->fresh()->is_admin)->toBeTrue();
+});
+
+test('making someone an admin takes them out of weeks they have not played', function () {
+    $user = User::factory()->active()->create();
+    $played = Entry::factory()->for($user)->submitted()->create();
+    Entry::factory()->for($user)->create();
+
+    $this->actingAs($this->admin)->post(route('admin.users.update', $user), ['is_admin' => true]);
+
+    expect($user->entries()->pluck('id')->all())->toBe([$played->id]);
+});
+
+test('admins are not entered into the open week', function () {
+    $week = Week::factory()->open()->create();
+    $user = User::factory()->create(['is_admin' => true]);
+
+    $this->actingAs($this->admin)->post(route('admin.users.update', $user), ['is_active' => true]);
+
+    expect($week->entries()->count())->toBe(0);
 });
 
 test('an admin can edit a profile and upload a photo', function () {

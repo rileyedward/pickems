@@ -8,6 +8,7 @@ import {
     ExternalLink,
     Eye,
     X,
+    Lock,
     LockOpen,
     Pencil,
     Plus,
@@ -54,6 +55,7 @@ import {
 } from '@/routes/admin/seasons';
 import {
     close,
+    lock,
     open,
     reopen,
     show as weekShow,
@@ -317,7 +319,7 @@ const selectClass =
                             act(
                                 'open',
                                 open(week.id).url,
-                                'Open this week? Every active user gets an entry and picks lock at the first kickoff.',
+                                'Open this week? Every active player gets an entry and picks lock at the first kickoff.',
                             )
                         "
                     >
@@ -335,6 +337,18 @@ const selectClass =
                             :class="{ 'animate-spin': busy === 'sync' }"
                         />
                         Sync from ESPN
+                    </Button>
+                    <Button
+                        :disabled="!!busy"
+                        @click="
+                            act(
+                                'lock',
+                                lock(week.id).url,
+                                `Lock picks now? Nobody can change their picks after this, and everyone's picks show on the board. ${entries.length - submittedCount} of ${entries.length} haven't submitted yet.`,
+                            )
+                        "
+                    >
+                        <Lock /> Lock picks now
                     </Button>
                 </template>
 

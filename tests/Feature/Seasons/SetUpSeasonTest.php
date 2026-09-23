@@ -107,7 +107,7 @@ test('nobody is enrolled once picks have locked', function () {
         ->and($week->entries()->count())->toBe(0);
 });
 
-test('the create admin command can run without a prompt and enters the admin', function () {
+test('the create admin command can run without a prompt and does not enter the admin', function () {
     $week = openWeekWithGames(1);
 
     $this->artisan('app:create-admin', ['email' => 'riley@example.com', 'name' => 'Riley', '--password' => 'secret-password'])
@@ -115,5 +115,5 @@ test('the create admin command can run without a prompt and enters the admin', f
 
     $admin = User::firstWhere('email', 'riley@example.com');
     expect($admin)->is_admin->toBeTrue()->is_active->toBeTrue()
-        ->and($week->entries()->where('user_id', $admin->id)->exists())->toBeTrue();
+        ->and($week->entries()->where('user_id', $admin->id)->exists())->toBeFalse();
 });

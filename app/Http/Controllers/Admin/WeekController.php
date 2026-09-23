@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Nfl\SyncWeekGames;
 use App\Actions\Weeks\CloseWeek;
+use App\Actions\Weeks\LockWeek;
 use App\Actions\Weeks\OpenWeek;
 use App\Actions\Weeks\ReopenWeek;
 use App\Http\Controllers\Controller;
@@ -51,6 +52,7 @@ class WeekController extends Controller
                 'tiebreaker_total' => $standings->tiebreakerTotal(),
             ],
             'availableUsers' => User::alphabetical()
+                ->where('is_admin', false)
                 ->whereNotIn('id', $week->entries->pluck('user_id'))
                 ->get()
                 ->map(fn (User $user) => ['id' => $user->id, 'name' => $user->display_name, 'is_active' => $user->is_active]),
@@ -74,6 +76,13 @@ class WeekController extends Controller
         $openWeek->handle($week);
 
         return $this->done("Week {$week->number} is open with {$week->entries()->count()} players entered.");
+    }
+
+    public function lock(Week $week, LockWeek $lockWeek): RedirectResponse
+    {
+        $lockWeek->handle($week);
+
+        return $this->done("Week {$week->number} is locked. Everyone's picks are on the board.");
     }
 
     public function close(Week $week, CloseWeek $closeWeek): RedirectResponse

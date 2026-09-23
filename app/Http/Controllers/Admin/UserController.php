@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Weeks\EnrollInOpenWeek;
 use App\Concerns\PasswordValidationRules;
 use App\Http\Controllers\Controller;
+use App\Models\Entry;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,7 +73,8 @@ class UserController extends Controller
 
     /**
      * Every field is optional so a switch (active, admin) can patch alone.
-     * Activating someone enters them into the week that's taking picks.
+     * Activating someone enters them into the week that's taking picks;
+     * making someone an admin takes them out of any week they haven't played.
      */
     public function update(Request $request, User $user, EnrollInOpenWeek $enroll): RedirectResponse
     {
@@ -93,7 +95,12 @@ class UserController extends Controller
         $user->fill(Arr::only($validated, ['name', 'nickname', 'email']));
         $user->forceFill(Arr::only($validated, ['is_active', 'is_admin']));
         $activated = $user->isDirty('is_active') && $user->is_active;
+        $promoted = $user->isDirty('is_admin') && $user->is_admin;
         $user->save();
+
+        if ($promoted) {
+            $user->entries()->whereNull('submitted_at')->get()->each(fn (Entry $entry) => $entry->delete());
+        }
 
         if ($activated) {
             $enroll->handle($user);

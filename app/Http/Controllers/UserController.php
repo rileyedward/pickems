@@ -13,12 +13,14 @@ use Inertia\Response;
 class UserController extends Controller
 {
     /**
-     * Everyone who's playing, plus anyone who has played before.
+     * Everyone who's playing, plus anyone who has played before. Admins
+     * aren't players, so they're left out.
      */
     public function index(): Response
     {
         return Inertia::render('Users/Index', [
             'users' => User::alphabetical()
+                ->where('is_admin', false)
                 ->where(fn ($query) => $query->where('is_active', true)->orWhereHas('entries'))
                 ->withCount(['entries as weeks_played' => fn ($query) => $query->whereNotNull('submitted_at')])
                 ->get()
@@ -35,6 +37,8 @@ class UserController extends Controller
      */
     public function show(Request $request, User $user): Response
     {
+        abort_if($user->is_admin, 404);
+
         $season = $request->filled('season')
             ? Season::where('year', $request->integer('season'))->firstOrFail()
             : Season::orderByDesc('year')->first();

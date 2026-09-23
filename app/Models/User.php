@@ -17,7 +17,8 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * A friend's account. Anyone can register; an admin marks the account active,
- * and only active users are entered into weeks.
+ * and only active users are entered into weeks. Admins only run the pool:
+ * they never play and don't appear on the public pages.
  *
  * @property int $id
  * @property string $name
@@ -78,6 +79,21 @@ class User extends Authenticatable
     public function scopeActive(Builder $query): void
     {
         $query->where('is_active', true);
+    }
+
+    /**
+     * Everyone who can play: active and not an admin.
+     *
+     * @param  Builder<User>  $query
+     */
+    public function scopePlayers(Builder $query): void
+    {
+        $query->where('is_active', true)->where('is_admin', false);
+    }
+
+    public function isPlayer(): bool
+    {
+        return $this->is_active && ! $this->is_admin;
     }
 
     /**

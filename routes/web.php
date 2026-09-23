@@ -40,6 +40,7 @@ Route::middleware('auth')->group(function () {
         Route::get('weeks/{week}', [Admin\WeekController::class, 'show'])->name('weeks.show');
         Route::post('weeks/{week}/sync', [Admin\WeekController::class, 'sync'])->name('weeks.sync');
         Route::post('weeks/{week}/open', [Admin\WeekController::class, 'open'])->name('weeks.open');
+        Route::post('weeks/{week}/lock', [Admin\WeekController::class, 'lock'])->name('weeks.lock');
         Route::post('weeks/{week}/close', [Admin\WeekController::class, 'close'])->name('weeks.close');
         Route::post('weeks/{week}/reopen', [Admin\WeekController::class, 'reopen'])->name('weeks.reopen');
 

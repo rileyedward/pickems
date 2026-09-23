@@ -76,3 +76,35 @@ test('a final game needs both scores', function () {
         'status' => 'final',
     ])->assertSessionHasErrors('home_score');
 });
+
+test('an admin can lock picks early to reveal the board', function () {
+    $week = openWeekWithGames(2);
+
+    $this->actingAs($this->admin)->post(route('admin.weeks.lock', $week))->assertSessionHasNoErrors();
+
+    expect($week->fresh())->is_locked->toBeTrue()
+        ->and($week->fresh()->phase())->toBe('locked');
+});
+
+test('a manual lock survives an edit to a game', function () {
+    $week = openWeekWithGames(2);
+    $this->actingAs($this->admin)->post(route('admin.weeks.lock', $week));
+
+    $game = $week->games->first();
+    $this->actingAs($this->admin)->put(route('admin.games.update', $game), [
+        'home_team_id' => $game->home_team_id,
+        'away_team_id' => $game->away_team_id,
+        'kickoff_at' => $game->kickoff_at->toIso8601String(),
+        'status' => $game->status->value,
+    ]);
+
+    expect($week->fresh()->is_locked)->toBeTrue();
+});
+
+test('only a week taking picks can be locked', function () {
+    $week = Week::factory()->create();
+
+    $this->actingAs($this->admin)->post(route('admin.weeks.lock', $week))->assertSessionHasErrors('week');
+
+    expect($week->fresh()->locks_at)->toBeNull();
+});
