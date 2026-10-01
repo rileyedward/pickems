@@ -53,8 +53,17 @@ export type StandingRow = {
     picks: Record<number, number>;
 };
 
+// A column of the pick grid. Results are only known once picks lock.
+export type PickGridRow = Pick<
+    StandingRow,
+    'user' | 'picks' | 'tiebreaker_guess'
+> &
+    Partial<StandingRow>;
+
 export type WeekBoard = {
     week: WeekSummary;
+    // Before the lock, picks are only sent to viewers who have submitted.
+    can_view_picks: boolean;
     games: Game[];
     tiebreaker_total: number | null;
     all_games_final: boolean;

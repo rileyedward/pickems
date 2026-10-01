@@ -4,37 +4,42 @@ namespace App\Support;
 
 use App\Models\Entry;
 use App\Models\Game;
+use App\Models\User;
 use App\Models\Week;
 
 /**
  * The "master spreadsheet" for a week: games, who's in (with each submitted
- * entry's picks), and — once picks lock — live standings.
+ * entry's picks), and — once picks lock — live standings. Until the lock,
+ * picks are only shown to viewers who have submitted their own.
  */
 class WeekBoard
 {
     /**
      * @return array<string, mixed>
      */
-    public static function present(Week $week): array
+    public static function present(Week $week, User $viewer): array
     {
-        // A closed week's results are final, so its board is cached.
+        // A closed week's results are final (and the same for every viewer),
+        // so its board is cached.
         return $week->isClosed()
-            ? ResultsCache::weekBoard($week->id, fn () => self::build($week))
-            : self::build($week);
+            ? ResultsCache::weekBoard($week->id, fn () => self::build($week, $viewer))
+            : self::build($week, $viewer);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private static function build(Week $week): array
+    private static function build(Week $week, User $viewer): array
     {
         $week->loadMissing(['season', 'games.homeTeam', 'games.awayTeam', 'entries.user', 'entries.picks']);
 
         $standings = WeekStandings::for($week);
         $revealPicks = $week->is_locked;
+        $canViewPicks = $revealPicks || self::hasSubmitted($week, $viewer);
 
         return [
             'week' => self::week($week),
+            'can_view_picks' => $canViewPicks,
             'games' => $week->games->map(fn (Game $game) => self::game($game))->values(),
             'tiebreaker_total' => $standings->tiebreakerTotal(),
             'all_games_final' => $standings->allGamesFinal(),
@@ -44,12 +49,23 @@ class WeekBoard
                     'user' => $entry->user->toAvatar(),
                     'submitted' => $entry->isSubmitted(),
                     'submitted_at' => $entry->submitted_at?->toIso8601String(),
-                    'tiebreaker_guess' => $entry->isSubmitted() ? $entry->tiebreaker_guess : null,
-                    'picks' => $entry->isSubmitted() ? self::picks($entry) : [],
+                    'tiebreaker_guess' => $canViewPicks && $entry->isSubmitted() ? $entry->tiebreaker_guess : null,
+                    'picks' => $canViewPicks && $entry->isSubmitted() ? self::picks($entry) : [],
                 ])
                 ->values(),
             'standings' => $revealPicks ? self::standings($week, $standings) : null,
         ];
+    }
+
+    /**
+     * Before the lock, seeing everyone's picks is the reward for getting your
+     * own in. Admins don't play, and can already see picks in the admin.
+     */
+    private static function hasSubmitted(Week $week, User $viewer): bool
+    {
+        return $viewer->is_admin || $week->entries->contains(
+            fn (Entry $entry) => $entry->user_id === $viewer->id && $entry->isSubmitted(),
+        );
     }
 
     /**

@@ -5,27 +5,32 @@ import TeamLogo from '@/components/TeamLogo.vue';
 import UserAvatar from '@/components/UserAvatar.vue';
 import GameMatchup from '@/components/board/GameMatchup.vue';
 import { ordinal, points } from '@/lib/format';
-import type { Game, StandingRow, Team } from '@/types';
+import type { Game, PickGridRow, Team } from '@/types';
 
-const props = defineProps<{
-    games: Game[];
-    rows: StandingRow[];
-}>();
+const props = withDefaults(
+    defineProps<{
+        games: Game[];
+        rows: PickGridRow[];
+        // Correct, place and points rows; off before picks lock.
+        showResults?: boolean;
+    }>(),
+    { showResults: true },
+);
 
 const page = usePage();
 const viewerId = computed(() => page.props.auth.user.id);
 
-function isViewer(row: StandingRow): boolean {
+function isViewer(row: PickGridRow): boolean {
     return row.user.id === viewerId.value;
 }
 
-function pickedTeam(game: Game, row: StandingRow): Team | null {
+function pickedTeam(game: Game, row: PickGridRow): Team | null {
     const teamId = row.picks[game.id];
 
     return [game.home, game.away].find((team) => team.id === teamId) ?? null;
 }
 
-function cellClass(game: Game, row: StandingRow): string {
+function cellClass(game: Game, row: PickGridRow): string {
     const teamId = row.picks[game.id];
 
     if (game.status !== 'final' || teamId === undefined) {
@@ -37,7 +42,7 @@ function cellClass(game: Game, row: StandingRow): string {
         : 'bg-orange-100/70 dark:bg-orange-900/40';
 }
 
-function columnClass(row: StandingRow): string {
+function columnClass(row: PickGridRow): string {
     return isViewer(row) ? 'bg-primary/5' : '';
 }
 
@@ -61,7 +66,7 @@ function pickShare(game: Game, team: Team): number {
                     </th>
                     <th
                         v-for="row in rows"
-                        :key="row.entry_id"
+                        :key="row.user.id"
                         class="sticky top-0 z-20 bg-card px-1 py-2 align-bottom shadow-[inset_0_-1px_0_var(--border)]"
                     >
                         <div
@@ -107,7 +112,7 @@ function pickShare(game: Game, team: Team): number {
                     </td>
                     <td
                         v-for="row in rows"
-                        :key="row.entry_id"
+                        :key="row.user.id"
                         class="px-1 py-2 text-center"
                         :class="cellClass(game, row)"
                     >
@@ -121,58 +126,60 @@ function pickShare(game: Game, team: Team): number {
                 </tr>
             </tbody>
             <tfoot>
-                <tr class="border-t-2 font-semibold">
-                    <td
-                        class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
-                    >
-                        Correct
-                    </td>
-                    <td
-                        v-for="row in rows"
-                        :key="row.entry_id"
-                        class="px-1 py-2 text-center text-base tabular-nums"
-                        :class="[
-                            columnClass(row),
-                            {
-                                'text-green-700 dark:text-green-300':
-                                    row.is_leader,
-                            },
-                        ]"
-                    >
-                        {{ row.correct }}
-                    </td>
-                </tr>
-                <tr class="border-t">
-                    <td
-                        class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
-                    >
-                        Place
-                    </td>
-                    <td
-                        v-for="row in rows"
-                        :key="row.entry_id"
-                        class="px-1 py-2 text-center tabular-nums"
-                        :class="columnClass(row)"
-                    >
-                        {{ row.placement ? ordinal(row.placement) : '—' }}
-                    </td>
-                </tr>
-                <tr class="border-t">
-                    <td
-                        class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
-                    >
-                        Pts
-                    </td>
-                    <td
-                        v-for="row in rows"
-                        :key="row.entry_id"
-                        class="px-1 py-2 text-center font-semibold tabular-nums"
-                        :class="columnClass(row)"
-                    >
-                        {{ points(row.points) }}
-                    </td>
-                </tr>
-                <tr class="border-t">
+                <template v-if="showResults">
+                    <tr class="border-t-2 font-semibold">
+                        <td
+                            class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
+                        >
+                            Correct
+                        </td>
+                        <td
+                            v-for="row in rows"
+                            :key="row.user.id"
+                            class="px-1 py-2 text-center text-base tabular-nums"
+                            :class="[
+                                columnClass(row),
+                                {
+                                    'text-green-700 dark:text-green-300':
+                                        row.is_leader,
+                                },
+                            ]"
+                        >
+                            {{ row.correct }}
+                        </td>
+                    </tr>
+                    <tr class="border-t">
+                        <td
+                            class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
+                        >
+                            Place
+                        </td>
+                        <td
+                            v-for="row in rows"
+                            :key="row.user.id"
+                            class="px-1 py-2 text-center tabular-nums"
+                            :class="columnClass(row)"
+                        >
+                            {{ row.placement ? ordinal(row.placement) : '—' }}
+                        </td>
+                    </tr>
+                    <tr class="border-t">
+                        <td
+                            class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
+                        >
+                            Pts
+                        </td>
+                        <td
+                            v-for="row in rows"
+                            :key="row.user.id"
+                            class="px-1 py-2 text-center font-semibold tabular-nums"
+                            :class="columnClass(row)"
+                        >
+                            {{ points(row.points) }}
+                        </td>
+                    </tr>
+                </template>
+                <tr :class="showResults ? 'border-t' : 'border-t-2'">
                     <td
                         class="sticky left-0 z-10 border-r bg-card px-2 py-2 text-xs tracking-wider text-muted-foreground uppercase sm:px-3"
                     >
@@ -180,7 +187,7 @@ function pickShare(game: Game, team: Team): number {
                     </td>
                     <td
                         v-for="row in rows"
-                        :key="row.entry_id"
+                        :key="row.user.id"
                         class="px-1 py-2 text-center tabular-nums"
                         :class="columnClass(row)"
                     >

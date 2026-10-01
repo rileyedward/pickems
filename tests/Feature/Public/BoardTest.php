@@ -37,6 +37,7 @@ test('submitted picks are visible before the lock, standings only after', functi
         ->component('Home')
         ->where('board.week.id', $week->id)
         ->where('myEntry.submitted', true)
+        ->where('board.can_view_picks', true)
         ->has('board.participants', 1)
         ->where('board.participants.0.submitted', true)
         ->where('board.participants.0.tiebreaker_guess', 41)
@@ -53,13 +54,72 @@ test('submitted picks are visible before the lock, standings only after', functi
 test('unsubmitted picks stay hidden from other players', function () {
     $week = openWeekWithGames(1);
     $game = $week->games->first();
+    Entry::factory()->for($week)->for($this->user)->submitted()->create();
     $entry = Entry::factory()->for($week)->create(['tiebreaker_guess' => 30]);
     $entry->picks()->create(['game_id' => $game->id, 'team_id' => $game->home_team_id]);
 
+    $this->actingAs($this->user)->get('/')->assertInertia(function (Assert $page) use ($entry) {
+        $page->where('board.can_view_picks', true);
+
+        expect(collect($page->toArray()['props']['board']['participants'])->firstWhere('user.id', $entry->user_id))
+            ->submitted->toBeFalse()
+            ->tiebreaker_guess->toBeNull()
+            ->picks->toBe([]);
+    });
+});
+
+test('before the lock, picks are hidden until the viewer has submitted their own', function () {
+    $week = openWeekWithGames(1);
+    $game = $week->games->first();
+    $mine = Entry::factory()->for($week)->for($this->user)->create();
+    $theirs = Entry::factory()->for($week)->submitted()->create(['tiebreaker_guess' => 30]);
+    $theirs->picks()->create(['game_id' => $game->id, 'team_id' => $game->home_team_id]);
+
+    $their = fn (Assert $page) => collect($page->toArray()['props']['board']['participants'])
+        ->firstWhere('user.id', $theirs->user_id);
+
+    $this->actingAs($this->user)->get('/')->assertInertia(function (Assert $page) use ($their) {
+        $page->where('board.can_view_picks', false);
+
+        expect($their($page))
+            ->submitted->toBeTrue()
+            ->tiebreaker_guess->toBeNull()
+            ->picks->toBe([]);
+    });
+
+    $mine->update(['submitted_at' => now()]);
+
+    $this->actingAs($this->user)->get('/')->assertInertia(function (Assert $page) use ($their, $game) {
+        $page->where('board.can_view_picks', true);
+
+        expect($their($page))
+            ->tiebreaker_guess->toBe(30)
+            ->picks->toBe([$game->id => $game->home_team_id]);
+    });
+});
+
+test('players who are not entered cannot see picks until the lock', function () {
+    $week = openWeekWithGames(1);
+    Entry::factory()->for($week)->submitted()->create(['tiebreaker_guess' => 30]);
+
     $this->actingAs($this->user)->get('/')->assertInertia(fn (Assert $page) => $page
-        ->where('board.participants.0.submitted', false)
-        ->where('board.participants.0.tiebreaker_guess', null)
-        ->where('board.participants.0.picks', []));
+        ->where('board.can_view_picks', false)
+        ->where('board.participants.0.tiebreaker_guess', null));
+
+    $week->update(['locks_at' => now()->subMinute()]);
+
+    $this->actingAs($this->user)->get('/')->assertInertia(fn (Assert $page) => $page
+        ->where('board.can_view_picks', true)
+        ->where('board.participants.0.tiebreaker_guess', 30));
+});
+
+test('admins can see submitted picks before the lock', function () {
+    $week = openWeekWithGames(1);
+    Entry::factory()->for($week)->submitted()->create(['tiebreaker_guess' => 30]);
+
+    $this->actingAs(User::factory()->admin()->create())->get('/')->assertInertia(fn (Assert $page) => $page
+        ->where('board.can_view_picks', true)
+        ->where('board.participants.0.tiebreaker_guess', 30));
 });
 
 test('entries that were never submitted show as did-not-play at the bottom', function () {

@@ -22,7 +22,7 @@ class HomeController extends Controller
         $entry = $week?->entries()->where('user_id', $request->user()->id)->first();
 
         return Inertia::render('Home', [
-            'board' => $week ? WeekBoard::present($week) : null,
+            'board' => $week ? WeekBoard::present($week, $request->user()) : null,
             'myEntry' => $entry ? ['submitted' => $entry->isSubmitted()] : null,
             'topThree' => $week ? array_slice(SeasonLeaderboard::cached($week->season)['rows'], 0, 3) : [],
         ]);
